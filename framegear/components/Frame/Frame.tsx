@@ -1,15 +1,25 @@
 import { postFrame } from '@/utils/postFrame';
 import { frameResultsAtom, mockFrameOptionsAtom } from '@/utils/store';
 import { useAtom } from 'jotai';
-import { ChangeEvent, PropsWithChildren, useCallback, useMemo, useState } from 'react';
+import { ChangeEvent, PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react';
 import { ExternalLinkIcon, ResetIcon, RocketIcon } from '@radix-ui/react-icons';
 import { useRedirectModal } from '@/components/RedirectModalContext/RedirectModalContext';
 import { FrameMetadataWithImageObject } from '@/utils/frameResultToFrameMetadata';
 import * as Player from '@livepeer/react/player';
 import { LoadingIcon } from '@livepeer/react/assets';
+import { fetchFrame } from '@/utils/fetchFrame';
 
-export function Frame() {
-  const [results] = useAtom(frameResultsAtom);
+export function Frame({ url }: { url: string }) {
+  const [results, setResults] = useAtom(frameResultsAtom);
+
+  const getResults = useCallback(async () => {
+    const result = await fetchFrame(url);
+    setResults((prev) => [...prev, result]);
+  }, [setResults, url]);
+
+  useEffect(() => {
+    getResults();
+  }, [getResults]);
 
   if (results.length === 0) {
     return <PlaceholderFrame />;
@@ -49,7 +59,7 @@ function ValidFrame({ metadata }: { metadata: FrameMetadataWithImageObject }) {
             },
           ]}
         >
-          <Player.Container className="h-full w-full overflow-hidden border-4 object-cover outline-none transition">
+          <Player.Container className="h-full w-full overflow-hidden object-cover outline-none transition">
             <Player.Video title="Live stream" className={'h-full w-full transition'} />
             <Player.LoadingIndicator className="data-[visible=true]:animate-in data-[visible=false]:animate-out data-[visible=false]:fade-out-0 data-[visible=true]:fade-in-0 relative h-full w-full bg-black/50 backdrop-blur">
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
@@ -101,15 +111,15 @@ function ValidFrame({ metadata }: { metadata: FrameMetadataWithImageObject }) {
         </Player.Root>
       ) : (
         <img
-          className={`w-full rounded-t-xl ${imageAspectRatioClassname} object-cover`}
+          className={`w-full ${imageAspectRatioClassname} object-cover`}
           src={image.src}
           alt=""
         />
       )}
-      <div className="bg-button-gutter-light dark:bg-content-light flex flex-col gap-2 rounded-b-xl px-4 py-2">
+      <div className="dark:bg-content-light flex flex-col gap-2 bg-gradient-to-tr from-yellow-300 via-green-400 via-purple-600 to-red-500 px-4 py-2">
         {!!input && (
           <input
-            className="bg-input-light border-light rounded-lg border p-2 text-black"
+            className="bg-input-light border-light border p-2 text-black"
             type="text"
             placeholder={input.text}
             onChange={handleInputChange}
@@ -131,7 +141,6 @@ function ValidFrame({ metadata }: { metadata: FrameMetadataWithImageObject }) {
           )}
         </div>
       </div>
-      <MockFrameOptions />
     </div>
   );
 }
@@ -147,8 +156,8 @@ function ErrorFrame() {
 function PlaceholderFrame() {
   return (
     <div className="flex flex-col">
-      <div className="bg-farcaster flex aspect-[1.91/1] w-full rounded-t-xl"></div>
-      <div className="bg-button-gutter-light dark:bg-content-light flex flex-wrap gap-2 rounded-b-xl px-4 py-2">
+      <div className="bg-farcaster flex aspect-[1.91/1] w-full"></div>
+      <div className="bg-button-gutter-light dark:bg-content-light flex flex-wrap gap-2 px-4 py-2">
         <FrameButton state={{}} index={1} inputText="">
           Get Started
         </FrameButton>
@@ -240,7 +249,7 @@ function FrameButton({
 
   return (
     <button
-      className="border-button flex w-[45%] grow items-center justify-center gap-1 rounded-lg border bg-white px-4 py-2 text-black"
+      className="border-button flex w-[45%] grow items-center justify-center gap-1 border bg-white px-4 py-2 text-black"
       type="button"
       onClick={handleClick}
       disabled={isLoading || button?.action === 'mint'}
