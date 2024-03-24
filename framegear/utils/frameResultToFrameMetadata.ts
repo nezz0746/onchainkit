@@ -1,7 +1,7 @@
 import { FrameImageMetadata, FrameMetadataType } from '@coinbase/onchainkit/frame';
 
 const getHLSUrl = (url: string) => {
-  if (url.includes('m3u8')) {
+  if (url?.includes('m3u8')) {
     return url as `${string}m3u8`;
   }
   return undefined;

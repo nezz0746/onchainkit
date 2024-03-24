@@ -1,13 +1,28 @@
 import { postFrame } from '@/utils/postFrame';
 import { frameResultsAtom, mockFrameOptionsAtom } from '@/utils/store';
 import { useAtom } from 'jotai';
-import { ChangeEvent, PropsWithChildren, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ChangeEvent,
+  PropsWithChildren,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { ExternalLinkIcon, ResetIcon, RocketIcon } from '@radix-ui/react-icons';
 import { useRedirectModal } from '@/components/RedirectModalContext/RedirectModalContext';
 import { FrameMetadataWithImageObject } from '@/utils/frameResultToFrameMetadata';
 import * as Player from '@livepeer/react/player';
 import { LoadingIcon } from '@livepeer/react/assets';
 import { fetchFrame } from '@/utils/fetchFrame';
+
+const FrameContext = createContext<{
+  metadata: FrameMetadataWithImageObject;
+  setMetadata: React.Dispatch<React.SetStateAction<FrameMetadataWithImageObject | null>>;
+  // @ts-expect-error
+}>({});
 
 export function Frame({ url }: { url: string }) {
   const [metadata, setMetadata] = useState<FrameMetadataWithImageObject | null>(null);
@@ -27,10 +42,15 @@ export function Frame({ url }: { url: string }) {
     return <PlaceholderFrame />;
   }
 
-  return <ValidFrame metadata={metadata} />;
+  return (
+    <FrameContext.Provider value={{ metadata, setMetadata }}>
+      <ValidFrame />
+    </FrameContext.Provider>
+  );
 }
 
-function ValidFrame({ metadata }: { metadata: FrameMetadataWithImageObject }) {
+function ValidFrame() {
+  const { metadata } = useContext(FrameContext);
   const [inputText, setInputText] = useState('');
 
   const { image, input, buttons } = metadata;
@@ -180,7 +200,7 @@ function FrameButton({
 }>) {
   const { openModal } = useRedirectModal();
   const [isLoading, setIsLoading] = useState(false);
-  const [_, setResults] = useAtom(frameResultsAtom);
+  const { setMetadata } = useContext(FrameContext);
   const [mockFrameOptions] = useAtom(mockFrameOptionsAtom);
 
   const handleClick = useCallback(async () => {
@@ -207,7 +227,7 @@ function FrameButton({
         );
         // TODO: handle when result is not defined
         if (result) {
-          setResults((prev) => [...prev, result]);
+          setMetadata(result.metadata);
         }
       };
       setIsLoading(true);
@@ -230,7 +250,7 @@ function FrameButton({
     inputText,
     mockFrameOptions,
     openModal,
-    setResults,
+    setMetadata,
     state,
   ]);
 
