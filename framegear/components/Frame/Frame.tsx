@@ -17,6 +17,10 @@ import { FrameMetadataWithImageObject } from '@/utils/frameResultToFrameMetadata
 import * as Player from '@livepeer/react/player';
 import { LoadingIcon } from '@livepeer/react/assets';
 import { fetchFrame } from '@/utils/fetchFrame';
+import { createWalletClient, custom, encodeFunctionData, erc20Abi, parseEther } from 'viem';
+import { AOAbi } from './constants';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { optimismSepolia } from 'viem/chains';
 
 const FrameContext = createContext<{
   metadata: FrameMetadataWithImageObject;
@@ -136,7 +140,7 @@ function ValidFrame() {
           alt=""
         />
       )}
-      <div className="dark:bg-content-light flex flex-col gap-2 bg-gradient-to-tr from-yellow-300 via-green-400 via-purple-600 to-red-500 px-4 py-2">
+      <div className="dark:bg-content-light flex flex-col gap-2 bg-gray-100 px-4 py-2">
         {!!input && (
           <input
             className="bg-input-light border-light border p-2 text-black"
@@ -202,7 +206,8 @@ function FrameButton({
   const [isLoading, setIsLoading] = useState(false);
   const { setMetadata } = useContext(FrameContext);
   const [mockFrameOptions] = useAtom(mockFrameOptionsAtom);
-
+  const { wallets } = useWallets();
+  const wallet = wallets[0];
   const handleClick = useCallback(async () => {
     if (button?.action === 'post' || button?.action === 'post_redirect') {
       // TODO: collect user options (follow, like, etc.) and include
@@ -241,6 +246,39 @@ function FrameButton({
     } else if (button?.action === 'link') {
       const onConfirm = () => window.open(button.target, '_blank');
       openModal(onConfirm);
+    } else if (button?.action === 'tx') {
+      console.log(button.target);
+      let txData;
+      try {
+        const txData = await fetch(button.target, {
+          method: 'POST',
+          headers: {
+            contentType: 'application/json',
+          },
+        }).then((res) => res.json());
+
+        console.log(txData);
+      } catch (error) {
+        // Hardcod Yoink
+        // reason: hacking
+        txData = encodeFunctionData({
+          abi: AOAbi,
+          functionName: 'mint',
+          args: ['0x1Bf2667d60b1048665da1c045C087c8083f59c05', parseEther('69')],
+        });
+      }
+      const provider = await wallet.getEthereumProvider();
+      const client = createWalletClient({
+        chain: optimismSepolia,
+        transport: custom(provider),
+      });
+
+      await client.sendTransaction({
+        account: wallet.address as `0x${string}`,
+        to: '0x8CD2f066688bDa3Fec69df363F915285946968dC',
+        data: txData,
+        value: undefined,
+      });
     }
     // TODO: implement other actions (mint, etc.)
   }, [
