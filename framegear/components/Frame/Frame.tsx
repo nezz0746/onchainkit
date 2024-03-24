@@ -5,6 +5,8 @@ import { ChangeEvent, PropsWithChildren, useCallback, useMemo, useState } from '
 import { ExternalLinkIcon, ResetIcon, RocketIcon } from '@radix-ui/react-icons';
 import { useRedirectModal } from '@/components/RedirectModalContext/RedirectModalContext';
 import { FrameMetadataWithImageObject } from '@/utils/frameResultToFrameMetadata';
+import * as Player from '@livepeer/react/player';
+import { LoadingIcon } from '@livepeer/react/assets';
 
 export function Frame() {
   const [results] = useAtom(frameResultsAtom);
@@ -20,6 +22,7 @@ export function Frame() {
 
 function ValidFrame({ metadata }: { metadata: FrameMetadataWithImageObject }) {
   const [inputText, setInputText] = useState('');
+
   const { image, input, buttons } = metadata;
   const imageAspectRatioClassname =
     metadata.image.aspectRatio === '1:1' ? 'aspect-square' : 'aspect-[1.91/1]';
@@ -32,11 +35,77 @@ function ValidFrame({ metadata }: { metadata: FrameMetadataWithImageObject }) {
   return (
     <div>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        className={`w-full rounded-t-xl ${imageAspectRatioClassname} object-cover`}
-        src={image.src}
-        alt=""
-      />
+      {metadata?.video ? (
+        <Player.Root
+          autoPlay
+          src={[
+            {
+              src: metadata?.video?.src,
+              type: 'hls',
+              width: 200,
+              height: 200,
+              // @ts-ignore: Temporarily non-standard mime type
+              mime: 'html5/application/vnd.apple.mpegurl',
+            },
+          ]}
+        >
+          <Player.Container className="h-full w-full overflow-hidden border-4 object-cover outline-none transition">
+            <Player.Video title="Live stream" className={'h-full w-full transition'} />
+            <Player.LoadingIndicator className="data-[visible=true]:animate-in data-[visible=false]:animate-out data-[visible=false]:fade-out-0 data-[visible=true]:fade-in-0 relative h-full w-full bg-black/50 backdrop-blur">
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                <LoadingIcon className="h-8 w-8 animate-spin" />
+              </div>
+              <p>Loading...</p>
+            </Player.LoadingIndicator>
+
+            <Player.ErrorIndicator
+              matcher="all"
+              className="data-[visible=true]:animate-in data-[visible=false]:animate-out data-[visible=false]:fade-out-0 data-[visible=true]:fade-in-0 absolute inset-0 flex select-none flex-col items-center justify-center gap-4 bg-black/40 text-center backdrop-blur-lg duration-1000"
+            >
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                <LoadingIcon className="h-8 w-8 animate-spin" />
+              </div>
+              <p>Loading...</p>
+            </Player.ErrorIndicator>
+
+            <Player.ErrorIndicator
+              matcher="offline"
+              className="animate-in fade-in-0 data-[visible=true]:animate-in data-[visible=false]:animate-out data-[visible=false]:fade-out-0 data-[visible=true]:fade-in-0 absolute inset-0 flex select-none flex-col items-center justify-center gap-4 bg-black/40 text-center backdrop-blur-lg duration-1000"
+            >
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-1">
+                  <div className="text-lg font-bold sm:text-2xl">Stream is offline</div>
+                  <div className="text-xs text-gray-100 sm:text-sm">
+                    Playback will start automatically once the stream has started
+                  </div>
+                </div>
+                <LoadingIcon className="mx-auto h-6 w-6 animate-spin md:h-8 md:w-8" />
+              </div>
+            </Player.ErrorIndicator>
+
+            <Player.ErrorIndicator
+              matcher="access-control"
+              className="data-[visible=true]:animate-in data-[visible=false]:animate-out data-[visible=false]:fade-out-0 data-[visible=true]:fade-in-0 absolute inset-0 flex select-none flex-col items-center justify-center gap-4 bg-black/40 text-center backdrop-blur-lg duration-1000"
+            >
+              <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-1">
+                  <div className="text-lg font-bold sm:text-2xl">Stream is private</div>
+                  <div className="text-xs text-gray-100 sm:text-sm">
+                    It looks like you don't have permission to view this content
+                  </div>
+                </div>
+                <LoadingIcon className="mx-auto h-6 w-6 animate-spin md:h-8 md:w-8" />
+              </div>
+            </Player.ErrorIndicator>
+          </Player.Container>
+        </Player.Root>
+      ) : (
+        <img
+          className={`w-full rounded-t-xl ${imageAspectRatioClassname} object-cover`}
+          src={image.src}
+          alt=""
+        />
+      )}
       <div className="bg-button-gutter-light dark:bg-content-light flex flex-col gap-2 rounded-b-xl px-4 py-2">
         {!!input && (
           <input
