@@ -10,24 +10,24 @@ import { LoadingIcon } from '@livepeer/react/assets';
 import { fetchFrame } from '@/utils/fetchFrame';
 
 export function Frame({ url }: { url: string }) {
-  const [results, setResults] = useAtom(frameResultsAtom);
+  const [metadata, setMetadata] = useState<FrameMetadataWithImageObject | null>(null);
 
   const getResults = useCallback(async () => {
     const result = await fetchFrame(url);
-    setResults((prev) => [...prev, result]);
-  }, [setResults, url]);
+    if (result) {
+      setMetadata(result.metadata);
+    }
+  }, [setMetadata, url]);
 
   useEffect(() => {
     getResults();
   }, [getResults]);
 
-  if (results.length === 0) {
+  if (!metadata) {
     return <PlaceholderFrame />;
   }
 
-  const latestFrame = results[results.length - 1];
-
-  return <ValidFrame metadata={latestFrame.metadata} />;
+  return <ValidFrame metadata={metadata} />;
 }
 
 function ValidFrame({ metadata }: { metadata: FrameMetadataWithImageObject }) {
