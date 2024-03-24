@@ -1,7 +1,15 @@
 import { FrameImageMetadata, FrameMetadataType } from '@coinbase/onchainkit/frame';
 
+const getHLSUrl = (url: string) => {
+  if (url.includes('m3u8')) {
+    return url as `${string}m3u8`;
+  }
+  return undefined;
+};
+
 export type FrameMetadataWithImageObject = FrameMetadataType & {
   image: FrameImageMetadata;
+  video?: { src: `${string}m3u8`; type: string };
 };
 
 export function frameResultToFrameMetadata(
@@ -18,6 +26,8 @@ export function frameResultToFrameMetadata(
       : undefined,
   );
   const imageSrc = result['fc:frame:image'];
+  const videoSrc = getHLSUrl(result['fc:frame:video']);
+  const videoType = result['fc:frame:video:type'];
   const imageAspectRatio = result['fc:frame:image:aspect_ratio'];
   const inputText = result['fc:frame:input'];
   const input = inputText ? { text: inputText } : undefined;
@@ -29,6 +39,7 @@ export function frameResultToFrameMetadata(
   return {
     buttons: buttons as any,
     image: { src: imageSrc, aspectRatio: imageAspectRatio as any },
+    video: videoSrc ? { src: videoSrc, type: videoType } : undefined,
     input,
     postUrl,
     state,
